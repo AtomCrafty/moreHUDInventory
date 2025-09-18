@@ -2,16 +2,6 @@
 #include "AHZConfiguration.h"
 #include "AHZPapyrusMoreHudIE.h"
 
-struct CompletionistRequest
-{
-   RE::FormID m_formId;
-};
-struct CompletionistResponse {
-   RE::FormID m_formID;
-   bool m_icontype; // false = New, true = Found
-   bool m_display;
-};  
-
 class CAHZScaleform
 {
 public:
@@ -30,8 +20,6 @@ public:
    bool m_enableItemCardResize;
    bool GetWasBookRead(RE::TESForm *form);
    bool isSurvivalMode();
-   std::optional<CompletionistResponse> m_completionistResponse{std::nullopt};
-   bool m_completionistInstalled{};
    
 private:
    CAHZScaleform();
@@ -50,10 +38,5 @@ private:
    bool m_showKnownEnchantment;
    bool m_showPosNegEffects;
 };
-
-namespace Scaleform
-{
-   void RegisterListener();
-}
 
 //extern CAHZScaleform g_ahzScaleform;

@@ -7,6 +7,7 @@
 #include "AHZConsole.h"
 #include "AHZConfiguration.h"
 #include "AHZPapyrusMoreHudIE.h"
+#include "Completionist.h"
 #include "Events.h"
 #include "Papyrus.h"
 #include "Scaleform.h"
@@ -27,7 +28,7 @@ namespace
             } break;
             case SKSE::MessagingInterface::kPostPostLoad:
             {
-                Scaleform::RegisterListener();
+                Completionist::Init();
             }
             break;
         }
@@ -115,7 +116,7 @@ extern "C"
             logger::info("moreHUDIE loaded"sv);
 
         } catch (const std::exception& e) {
-            logger::critical(e.what());
+            logger::critical("{}", e.what());
             return false;
         } catch (...) {
             logger::critical("caught unknown exception"sv);

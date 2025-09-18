@@ -2,6 +2,7 @@
 
 #include "ActorValueList.h"
 #include "AHZScaleform.h"
+#include "Completionist.h"
 #include "HashUtil.h"
 
 double CAHZScaleform::mRound(double r)
@@ -27,17 +28,6 @@ void CAHZScaleform::ExtendItemCard(RE::GFxMovieView * view, RE::GFxValue * objec
 
 	RE::GFxValue obj;
 	view->CreateObject(&obj);
-
-    m_completionistResponse = std::nullopt;
-
-    if (m_completionistInstalled)
-    {
-        if (auto* messageInterface = SKSE::GetMessagingInterface())
-        {
-            CompletionistRequest request{item->object->GetFormID()};
-            messageInterface->Dispatch(1, &request, sizeof(request), "Completionist");
-        }
-    }
 
 	if ((item->object->GetFormType() == RE::FormType::Armor || item->object->GetFormType() == RE::FormType::Weapon) && m_showKnownEnchantment)
 	{
@@ -133,18 +123,26 @@ void CAHZScaleform::ExtendItemCard(RE::GFxMovieView * view, RE::GFxValue * objec
 	auto itemId = static_cast<std::int32_t>(SKSE::HashUtil::CRC32(name, item->object->formID & 0x00FFFFFF));
 	auto iconName = PapyrusMoreHudIE::GetIconName(itemId);
 
-	if (iconName.length())
+	if (!iconName.empty())
 	{
 		RegisterString(object, "AHZItemIcon", iconName.c_str());
 	}
     
     auto customIcons = PapyrusMoreHudIE::GetFormIcons(item->object->formID);
 
-    if (m_completionistResponse && m_completionistResponse->m_display && m_completionistResponse->m_formID == item->object->formID)
-    {
-        customIcons.emplace_back(m_completionistResponse->m_icontype ? "cmpFound"sv : "cmpNew"sv);
+    if (Completionist::IsReady()) {
+        const auto form = RE::TESForm::LookupByID(item->object->formID);
+        const auto object = skyrim_cast<RE::TESBoundObject*>(form);
+        if (object) {
+            const auto iconInfo = Completionist::GetIconInfo(object);
+            const auto iconName = iconInfo.GetRequiredIconName();
+
+            if (iconName && *iconName) {
+                customIcons.emplace_back(iconName);
+                //logger::info("custom icon: {}", iconName);
+            }
+        }
     }
-    m_completionistResponse = std::nullopt;
 
     if (!customIcons.empty()){
         RE::GFxValue          entry;
@@ -344,23 +342,3 @@ void CAHZScaleform::RegisterBoolean(RE::GFxValue * dst, const char * name, bool 
    fxValue.SetBoolean(value);
    dst->SetMember(name, fxValue);
 };
-namespace Scaleform
-{
-    void RegisterListener()
-    {
-        if (WinAPI::GetModuleHandle(L"Completionist"))
-        {
-            CAHZScaleform::Singleton().m_completionistInstalled = true;
-            logger::info("Completionist is installed, registering listener"sv);
-            auto* messageInterface = SKSE::GetMessagingInterface();
-            messageInterface->RegisterListener("Completionist", [](SKSE::MessagingInterface::Message* a_msg)
-            {
-                if (!a_msg || a_msg->type != 2 || !a_msg->data)
-                {
-                    return;
-                }            
-                CAHZScaleform::Singleton().m_completionistResponse = *static_cast<CompletionistResponse*>(a_msg->data);
-            });
-        }
-    }
-}

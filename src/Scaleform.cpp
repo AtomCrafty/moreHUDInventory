@@ -1,5 +1,8 @@
 #include "PCH.h"
 #include "Scaleform.h"
+
+#include <Completionist.h>
+
 #include "AHZScaleform.h"
 #include "SKSE/API.h"
 #include "AHZPapyrusMoreHudIE.h"
@@ -101,24 +104,28 @@ class SKSEScaleform_GetFormIcons : public RE::GFxFunctionHandler
 	{
 		if (a_params.args && a_params.argCount && a_params.args[0].IsNumber())
 		{
-			auto formId = static_cast<RE::FormID>(a_params.args[0].GetNumber());
-
-            auto customIcons = PapyrusMoreHudIE::GetFormIcons(formId);
-            RE::GFxValue          customIconArray;
             a_params.movie->CreateArray(a_params.retVal);
 
-            if (!customIcons.empty()){
-                RE::GFxValue          entry;
-                a_params.retVal->SetArraySize(static_cast<uint32_t>(customIcons.size()));
-                auto idx = 0;
-                for (auto& ci: customIcons)
-                {
-                    entry.SetString(ci);
-                    a_params.retVal->SetElement(idx++, entry);
-                }  
+			auto formId = static_cast<RE::FormID>(a_params.args[0].GetNumber());
+            auto customIcons = PapyrusMoreHudIE::GetFormIcons(formId);
+
+            const auto form = RE::TESForm::LookupByID(formId);
+            const auto object = skyrim_cast<RE::TESBoundObject*>(form);
+            if (object) {
+                const auto iconInfo = Completionist::GetIconInfo(object);
+                const auto iconName = iconInfo.GetRequiredIconName();
+
+                if (iconName && *iconName) {
+                    customIcons.emplace_back(iconName);
+                    //logger::info("custom icon: {}", iconName);
+                }
             }
-            else{
-                a_params.retVal->SetArraySize(0);
+
+            auto& result = a_params.retVal;
+            result->SetArraySize(static_cast<uint32_t>(customIcons.size()));
+
+            for (size_t i = 0; i < customIcons.size(); i++) {
+                result->SetElement(static_cast<uint32_t>(i), customIcons[i]);
             }
 		}
 	}
